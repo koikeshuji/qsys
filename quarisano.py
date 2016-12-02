@@ -1,10 +1,6 @@
-# coding: utf-8
 from sklearn.covariance import EmpiricalCovariance
 
-from collections import (
-    Counter,
-    defaultdict,
-)
+from collections import Counter, defaultdict
 import ipaddress
 
 DEFAULT_RELIABILITY = 0.5
