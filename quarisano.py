@@ -1,12 +1,14 @@
 from sklearn.covariance import EmpiricalCovariance
 
-from collections import Counter, defaultdict
+from collections import Counter, defaultdict, namedtuple
 import ipaddress
+import math
 import pickle
 
 DEFAULT_RELIABILITY = 0.5
 DEFAULT_BLOCK = 0.3
 DEFAULT_THRESH = 4.0
+ETA = 0.03
 
 
 def _parse_ip(ip):
@@ -33,6 +35,9 @@ def _parse_subnet(subnet):
 
 def _clamp(x, mini, maxi):
     return max(min(x, maxi), mini)
+
+
+QPacket = namedtuple("QPacket", "src_ip dst_ip payload")
 
 
 class Quarisano(object):
@@ -62,11 +67,14 @@ class Quarisano(object):
 
     def predict(self, packet):
         """
+        :type packet: QPacket
         :rtype: bool
         """
         self._update_log(packet)
         src_ip = _parse_ip(packet.src_ip)
         rel = self._update_reliability(src_ip)
+        print(packet)
+        print("rel:", rel)
         return rel > self.block
 
     def save(self, f):
@@ -79,16 +87,21 @@ class Quarisano(object):
     def _update_reliability(self, src_ip):
         src_ip = _parse_ip(src_ip)
         dist = self._get_dist(src_ip)
-        self.reliability[src_ip] += (dist - self.thresh + 1 * 10)
+        delta = -math.tanh((dist - self.thresh / 2)) * ETA
+        self.reliability[src_ip] += delta
         self.reliability[src_ip] = _clamp(self.reliability[src_ip], 0.0, 1.0)
+
+        print("dist:{}".format(dist))
+        print("delta:{}".format(delta))
         return self.reliability[src_ip]
 
     def _get_dist(self, src_ip):
         src_ip = _parse_ip(src_ip)
+        vec = self._build_vector(src_ip)
         mat = self._build_matrix()
-        mdist = EmpiricalCovariance().mahalanobis(mat)
-        idx = sorted(list(self.known_ip)).index(src_ip) + 1
-        return mdist[idx]
+        print(mat)
+        mdist = EmpiricalCovariance().fit(mat).mahalanobis([vec])[0]
+        return mdist
 
     def _build_matrix(self):
         return [
@@ -97,10 +110,9 @@ class Quarisano(object):
         ]
 
     def _build_vector(self, ip):
-        return [
-            v
-            for k, v in sorted(Counter(self.packet_log[ip]))
-        ]
+        counter = Counter(self.packet_log[ip])
+        features = len(self.subnets)
+        return [counter[i] for i in range(-1, features)]
 
     def _update_log(self, packet):
         src_ip = _parse_ip(packet.src_ip)
