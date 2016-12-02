@@ -1,2 +1,4 @@
 ryu
 scikit-learn
+numpy
+scipy
