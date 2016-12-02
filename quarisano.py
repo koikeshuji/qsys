@@ -2,6 +2,7 @@ from sklearn.covariance import EmpiricalCovariance
 
 from collections import Counter, defaultdict
 import ipaddress
+import pickle
 
 DEFAULT_RELIABILITY = 0.5
 DEFAULT_BLOCK = 0.3
@@ -68,6 +69,13 @@ class Quarisano(object):
         rel = self._update_reliability(src_ip)
         return rel > self.block
 
+    def save(self, f):
+        pickle.dump(self, f)
+
+    @staticmethod
+    def load(f):
+        return pickle.load(f)
+
     def _update_reliability(self, src_ip):
         src_ip = _parse_ip(src_ip)
         dist = self._get_dist(src_ip)
@@ -109,3 +117,12 @@ class Quarisano(object):
             if ip in subnet:
                 return idx
         return -1
+
+_quarisano = Quarisano()
+register_subnet = _quarisano.register_subnet
+predict = _quarisano.predict
+save = _quarisano.save
+
+def load(f):
+    global _quarisano
+    _quarisano = Quarisano.load(f)
