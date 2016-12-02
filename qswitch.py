@@ -1,3 +1,5 @@
+import quarisano
+
 from ryu.base import app_manager
 from ryu.controller import ofp_event
 from ryu.controller.handler import CONFIG_DISPATCHER, MAIN_DISPATCHER
@@ -8,6 +10,10 @@ from ryu.lib.packet import ethernet, ipv4, tcp, udp
 from ryu.lib.packet import ether_types
 
 from pprint import pprint
+
+quarisano.register_subnet("192.168.1.0/24")
+quarisano.register_subnet("192.168.10.0/24")
+quarisano.register_subnet("192.168.100.0/24")
 
 
 class QSwitch(app_manager.RyuApp):
@@ -61,6 +67,11 @@ class QSwitch(app_manager.RyuApp):
         tcp_header = pkt.get_protocol(tcp.tcp)
         udp_header = pkt.get_protocol(udp.udp)
         payload = pkt[-1]
+        if ip_header:
+            if tcp_header is None and udp_header is None:
+                payload = None
+            qpkt = quarisano.QPacket(ip_header.src, ip_header.dst, payload)
+            pprint(quarisano.predict(qpkt))
 
         dst = eth.dst
         src = eth.src
