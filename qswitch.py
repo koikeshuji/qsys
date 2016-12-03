@@ -67,11 +67,12 @@ class QSwitch(app_manager.RyuApp):
         tcp_header = pkt.get_protocol(tcp.tcp)
         udp_header = pkt.get_protocol(udp.udp)
         payload = pkt[-1]
+        accepted = True
         if ip_header:
             if tcp_header is None and udp_header is None:
                 payload = None
             qpkt = quarisano.QPacket(ip_header.src, ip_header.dst, payload)
-            pprint(quarisano.predict(qpkt))
+            accepted = quarisano.predict(qpkt)
 
         dst = eth.dst
         src = eth.src
@@ -86,9 +87,10 @@ class QSwitch(app_manager.RyuApp):
         else:
             out_port = ofproto.OFPP_FLOOD
 
-        actions = [parser.OFPActionOutput(out_port)]
-        data = msg.data 
+        if accepted:
+            actions = [parser.OFPActionOutput(out_port)]
+            data = msg.data 
 
-        out = parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id,
-                                  in_port=in_port, actions=actions, data=data)
-        datapath.send_msg(out)
+            out = parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id,
+                    in_port=in_port, actions=actions, data=data)
+            datapath.send_msg(out)
