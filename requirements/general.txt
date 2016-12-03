@@ -2,3 +2,4 @@ ryu
 scikit-learn
 numpy
 scipy
+editdistance
