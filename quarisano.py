@@ -86,6 +86,7 @@ class Quarisano(object):
         if len(self.known_ip) >= 2 and packet.payload:
             cmd_prob = self._get_command_prob(packet)
             self.reliability[src_ip] += (0.3 - cmd_prob) * ETA
+            self.reliability[src_ip] = _clamp(self.reliability[src_ip], 0.0, 1.0)
 
         print("rel:", rel)
         return rel > self.block
