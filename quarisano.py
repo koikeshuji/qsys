@@ -117,7 +117,7 @@ class Quarisano(object):
         mdist = EmpiricalCovariance().fit(mat).mahalanobis([vec])[0]
         return mdist
 
-    def _get_command_prob(packet):
+    def _get_command_prob(self, packet):
         src_ip = _parse_ip(packet.src_ip)
         eds = {
             ip: [editdistance.eval(packet.payload, x) for x in self.payload_log[ip]]
