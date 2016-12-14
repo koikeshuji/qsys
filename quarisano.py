@@ -83,7 +83,7 @@ class Quarisano(object):
         src_ip = _parse_ip(packet.src_ip)
         rel = self._update_reliability(src_ip)
         
-        if len(self.known_ip) >= 2 and packet.payload:
+        if len(self.known_ip) >= 2 and packet.payload is not None:
             cmd_prob = self._get_command_prob(packet)
             self.reliability[src_ip] += (0.3 - cmd_prob) * ETA
             self.reliability[src_ip] = _clamp(self.reliability[src_ip], 0.0, 1.0)
@@ -118,7 +118,9 @@ class Quarisano(object):
         return mdist
 
     def _get_command_prob(self, packet):
-        src_ip = _parse_ip(packet.src_ip)
+        src_ip = _parse_ip(packet.dst_ip)
+        self.payload_log[src_ip].append(packet.payload)
+        self.known_ip.add(src_ip)
         eds = {
             ip: [editdistance.eval(packet.payload, x) for x in self.payload_log[ip]]
             for ip in self.known_ip
@@ -129,10 +131,12 @@ class Quarisano(object):
         }
         per = {
             ip: len(near[ip]) / len(eds[ip])
-            for ip in self.known_ip
+            for ip in self.known_ip if len(eds[ip])
         }
+        if len(self.known_ip) == 1:
+            return 0.0
         my = per[src_ip]
-        other_avg = sum(per[ip] for ip in self.known_ip if ip != src_ip) / (len(self.known_ip) - 1)
+        other_avg = sum(per[ip] for ip in per.keys() if ip != src_ip) / (len(self.known_ip) - 1)
         
         if my > other_avg:
             return (my - other_avg) * (1 - other_avg)
